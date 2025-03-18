@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "jsm/loaders/GLTFLoader.js";
 import { RGBELoader } from "jsm/loaders/RGBELoader.js";
-
+import { MeshoptDecoder } from "jsm/libs/meshopt_decoder.module.js"; 
 document.addEventListener("DOMContentLoaded", function () {
     // Get the container div
     const container = document.getElementById("three-container");
@@ -31,20 +31,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Load HDRI for reflections
     const rgbeLoader = new RGBELoader();
-    rgbeLoader.load("qwantani_noon_1k.hdr", (texture) => {
+    rgbeLoader.load("abandoned_tank_farm_05_1k.hdr", (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
         scene.background = null;
+         // ✅ Rotate HDRI using matrix transformation
+        texture.rotation = Math.PI ;  // Adjust the angle as needed
+        texture.center.set(0.5, 0.5); // Center rotation
     });
 
     // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 5);
-    directionalLight.castShadow = true;
-    scene.add(directionalLight);
+// 🔥 Reduce intensity of shadow-casting lights
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2);
+directionalLight.position.set(5, 10, 5);
+directionalLight.castShadow = true;
+scene.add(directionalLight);
+
+// ✅ Reduce shadow map size to improve performance
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+directionalLight.shadow.mapSize.width = 1024; // Default is 2048, reducing it speeds up rendering
+directionalLight.shadow.mapSize.height = 1024;
+
 
     // Floor
     const floorGeometry = new THREE.PlaneGeometry(0, 0);
@@ -62,17 +73,16 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Load GLTF Model
     const loader = new GLTFLoader();
-    loader.load("NOBITHA FINAL4.glb", (gltf) => {
-        gltf.scene.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                child.material.envMapIntensity = 1;
-            }
-        });
+    loader.setMeshoptDecoder(MeshoptDecoder);
+loader.load(
+    "NOBITHA_OPTIMIZED.glb",
+    (gltf) => {
+        console.log("✅ GLB Loaded Successfully");
         scene.add(gltf.scene);
-    }, undefined, (error) => console.error(error));
-
+    },
+    undefined,
+    (error) => console.error("❌ GLB Load Error:", error)
+);
     // Animation Loop
     function animate() {
         requestAnimationFrame(animate);
